@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package routeguide;
+
+service Routeguide {
+    // say hello
+    rpc sayHello(Name) returns(Greeting) {}
+
+    // a simple rpc
+    rpc GetFeature(Point) returns(Feature) {}
+}
+
+message Name {
+    string name = 1;
+}
+
+message Greeting {
+    string greeting = 1;
+}
+
+message Point {
+    int32 latitude = 1;
+    int32 longitude = 2;
+}
+
+message Feature {
+    string name = 1;
+    Point location = 2;
+}
