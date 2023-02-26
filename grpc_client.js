@@ -21,44 +21,48 @@ let routeguide = protoDescriptor.routeguide;
 function main() {
     let client = new routeguide.Routeguide('localhost:50051', GRPC.credentials.createInsecure());
     
-    // client.sayHello({name: "eslam"}, (err, Response) => {
-    //     console.log(Response.greeting);
-    // });
+    // say hello
+    client.sayHello({name: "eslam"}, (err, Response) => {
+        console.log(Response.greeting);
+    });
 
-    // client.GetFeature({latitude: 413628155, longitude: -749015466}, (err, Response) => {
-    //     if (err) {
-    //         if (err.code === 5){
-    //             console.error(err.code, 'NOT_FOUND', err.details);
-    //         } else {
-    //             console.error(err.code, err.details);
-    //         }
-    //     } else {
-    //         console.log(Response);
-    //     }
-    // });
+    // a simple rpc
+    client.GetFeature({latitude: 413628155, longitude: -749015466}, (err, Response) => {
+        if (err) {
+            if (err.code === 5){
+                console.error(err.code, 'NOT_FOUND', err.details);
+            } else {
+                console.error(err.code, err.details);
+            }
+        } else {
+            console.log(Response);
+        }
+    });
 
-    // let listFeturesCall = client.ListFeatures(
-    //     {   
-    //         lo: {latitude: 407838352, longitude: -746143764},
-    //         hi: {latitude: 407838352, longitude: -746143764}
-    //     });
+    // A server side streaming RPC.
+    let listFeturesCall = client.ListFeatures(
+        {   
+            lo: {latitude: 407838352, longitude: -746143764},
+            hi: {latitude: 407838352, longitude: -746143764}
+        });
     
-    // listFeturesCall.on('data', (feat) => {
-    //     console.log(feat);
-    // });
+    listFeturesCall.on('data', (feat) => {
+        console.log(feat);
+    });
 
-    // listFeturesCall.on('error', (err) => {
-    //     if (err.code === 5){
-    //         console.error(err.code, 'NOT_FOUND', err.details);
-    //     } else {
-    //         console.error(err.code, err.details);
-    //     }
-    // });
+    listFeturesCall.on('error', (err) => {
+        if (err.code === 5){
+            console.error(err.code, 'NOT_FOUND', err.details);
+        } else {
+            console.error(err.code, err.details);
+        }
+    });
 
-    // listFeturesCall.on('end', () => {
-    //     console.log('stream ended');
-    // });
+    listFeturesCall.on('end', () => {
+        console.log('stream ended');
+    });
 
+    // A client side streaming RPC.
     let RouteSummaryCall =  client.RecordRoute((err, data) => {
         if (err){
             console.log('the error', err);
@@ -88,6 +92,49 @@ function main() {
     });
     RouteSummaryCall.end();
 
+    // A Bidirectional streaming RPC.
+    let routeChatCall = client.RouteChat();
+
+    routeChatCall.on('data', (note) => {
+        console.log(`Got message ${note.message} at ${note.location.latitude}, ${note.location.longitude}`);
+    });
+
+    routeChatCall.on('end', () => {
+        console.log('stream ended');
+    });
+
+    let notes = [{
+        location: {
+          latitude: 0,
+          longitude: 0
+        },
+        message: 'First message'
+      }, {
+        location: {
+          latitude: 0,
+          longitude: 1
+        },
+        message: 'Second message'
+      }, {
+        location: {
+          latitude: 1,
+          longitude: 0
+        },
+        message: 'Third message'
+      }, {
+        location: {
+          latitude: 0,
+          longitude: 0
+        },
+        message: 'Fourth message'
+      }];
+
+      notes.forEach((note)=>{
+        console.log('Sending message "' + note.message + '" at ' +
+            note.location.latitude + ', ' + note.location.longitude);
+        routeChatCall.write(note);
+      });
+      routeChatCall.end();
 };
 
 main();

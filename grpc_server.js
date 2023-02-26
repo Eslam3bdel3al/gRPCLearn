@@ -23,6 +23,7 @@ const COORD_FACTOR = 1e7;
 const R = 6371000; // earth radius in metres
 
 let feature_list = JSON.parse(FS.readFileSync('./route_guide_db.json'));
+let route_notes = {};
 
 function sayHello(call, callback){
     callback(null,{greeting: `hello ${call.request.name}`});
@@ -139,9 +140,36 @@ function RecordRoute(call, callback){
     });
 };
 
+function pointKey(point){
+    return point.latitude + ' ' + point.longitude;
+}
+
+function RouteChat(call){
+    call.on('data', (note) => {
+        let key = pointKey(note.location);
+
+        console.log(route_notes);
+        /* For each note sent, respond with all previous notes that correspond to
+        * the same point */
+       if (route_notes.hasOwnProperty(key)) {
+
+            _.each(route_notes[key], (theNote) => {
+                call.write(theNote);
+            });
+       } else {
+            route_notes[key] = [];
+       }
+       route_notes[key].push(JSON.parse(JSON.stringify(note)));
+    });
+
+    call.on('end', () => {
+        call.end();
+    });
+};
+
 function main(){
     let server = new GRPC.Server()
-    server.addService(routeguide.Routeguide.service,{sayHello, GetFeature, ListFeatures, RecordRoute});
+    server.addService(routeguide.Routeguide.service,{sayHello, GetFeature, ListFeatures, RecordRoute, RouteChat});
     server.bindAsync('127.0.0.1:50051', GRPC.ServerCredentials.createInsecure(), () => {
         server.start();
     });
